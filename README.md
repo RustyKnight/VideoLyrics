@@ -2,6 +2,12 @@
 
 A macOS command-line tool that generates a **transparent lyrics overlay video** (`.mov`) from an MP3 audio file and an LRCX lyrics file. The output is designed to be composited over a background in a video editor such as Final Cut Pro or DaVinci Resolve.
 
+## AI
+
+<img src=".assets/github-copilot-icon.svg" alt="GitHub Copilot" width="128" height="128">
+
+This library is AI implementation of a pre-existing project intended to help improve one some of core features I felt were missing from the original.
+
 ## Features
 
 - Renders lyrics as white text with a black stroke outline for legibility over any background
@@ -82,4 +88,4 @@ The `[length:]` tag is validated against the MP3 duration (within a 1-second tol
 
 ## Dependencies
 
-- [LyrixLib](../LyrixLib) — local Swift package for LRC/LRCX parsing
+- [LyrixLib](https://github.com/RustyKnight/LyrixLib) — local Swift package for LRC/LRCX parsing

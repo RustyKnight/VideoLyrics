@@ -7,7 +7,7 @@ let package = Package(
     name: "VideoLyrics",
     platforms: [.macOS(.v13)],
     dependencies: [
-        .package(path: "../LyrixLib"),
+        .package(url: "https://github.com/RustyKnight/LyrixLib", branch: "main"),
     ],
     targets: [
         .executableTarget(

@@ -1,0 +1,15 @@
+{
+  "originHash" : "f07b05829ee044311c95c464c93e1dbbe29329cc43878edfd80840d2167d15cb",
+  "pins" : [
+    {
+      "identity" : "lyrixlib",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RustyKnight/LyrixLib",
+      "state" : {
+        "branch" : "main",
+        "revision" : "25d17f80a5cc04a2a80779d8e4a2f384a0d73942"
+      }
+    }
+  ],
+  "version" : 3
+}
