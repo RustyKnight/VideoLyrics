@@ -22,6 +22,8 @@ struct LyricsFrameRenderer {
     /// Stroke pass line-width at 1080p. The fill pass then covers the inner half,
     /// leaving an effective outline of ~half this value.
     private static let baseStroke: CGFloat = 6
+    /// Padding around the text block inside the progress fill capsule at 1080p.
+    private static let baseBarPad: CGFloat = 14
 
     private static let fontName = "Arial Rounded MT Bold"
 
@@ -38,8 +40,23 @@ struct LyricsFrameRenderer {
         let text = line.displayText
         guard !text.isEmpty else { return }
 
-        let highlightCount = resolveHighlightCount(line: line, at: milliseconds)
-        drawLyric(text: text, highlightCount: highlightCount, into: context, size: size)
+        if let progress = resolveProgress(line: line, at: milliseconds) {
+            let highlightCount = resolveHighlightCount(line: line, at: milliseconds)
+            drawLyricWithProgressFill(text: text, progress: progress, highlightCount: highlightCount, into: context, size: size)
+        } else {
+            let highlightCount = resolveHighlightCount(line: line, at: milliseconds)
+            drawLyric(text: text, highlightCount: highlightCount, into: context, size: size)
+        }
+    }
+
+    // MARK: - Progress resolution
+
+    /// Returns a 0–1 progress value when the line carries an explicit duration,
+    /// or `nil` when progress-fill is not supported (falls back to character/word highlight).
+    private func resolveProgress(line: LyrixLine, at milliseconds: Int) -> Double? {
+        guard let duration = line.lineDurationMilliseconds, duration > 0 else { return nil }
+        let elapsed = milliseconds - line.timestamp
+        return min(max(Double(elapsed) / Double(duration), 0.0), 1.0)
     }
 
     // MARK: - Highlight resolution
@@ -125,6 +142,84 @@ struct LyricsFrameRenderer {
         context.restoreGState()
 
         // — Pass 2: colored fill (white / translucent red) —
+        context.saveGState()
+        context.setTextDrawingMode(.fill)
+        let fillFrame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, 0), framePath, nil)
+        CTFrameDraw(fillFrame, context)
+        context.restoreGState()
+
+        context.restoreGState()
+    }
+
+    private func drawLyricWithProgressFill(text: String, progress: Double, highlightCount: Int, into context: CGContext, size: CGSize) {
+        let scale       = size.height / Self.baseHeight
+        let fontSize    = Self.baseFontSize * scale
+        let safeH       = Self.baseSafeH    * scale
+        let safeB       = Self.baseSafeB    * scale
+        let strokeWidth = Self.baseStroke   * scale
+        let pad         = Self.baseBarPad   * scale
+        let textWidth   = size.width - safeH * 2
+
+        let font           = CTFontCreateWithName(Self.fontName as CFString, fontSize, nil)
+        let paragraphStyle = makeParagraphStyle()
+        let attrString     = makeAttributedString(
+            text:           text,
+            highlightCount: highlightCount,
+            font:           font,
+            paragraphStyle: paragraphStyle
+        )
+
+        let framesetter = CTFramesetterCreateWithAttributedString(attrString as CFAttributedString)
+        let textSize = CTFramesetterSuggestFrameSizeWithConstraints(
+            framesetter,
+            CFRangeMake(0, 0),
+            nil,
+            CGSize(width: textWidth, height: .greatestFiniteMagnitude),
+            nil
+        )
+
+        context.saveGState()
+        context.textMatrix = .identity
+
+        let frameRect = CGRect(
+            x:      safeH,
+            y:      safeB,
+            width:  textWidth,
+            height: textSize.height + fontSize * 0.25
+        )
+        let framePath = CGPath(rect: frameRect, transform: nil)
+
+        // — Pass 1: progress fill capsule (behind text) —
+        // Sized to the actual rendered text width (centred in the safe area) + padding on all sides,
+        // growing left→right with progress.
+        let capsuleFullWidth = textSize.width + pad * 2
+        let capsuleHeight    = frameRect.height + pad * 2
+        let capsuleX         = safeH + (textWidth - textSize.width) / 2 - pad
+        let capsuleY         = safeB - pad
+        let fillWidth        = capsuleFullWidth * CGFloat(progress)
+        if fillWidth > 0 {
+            let cornerR = capsuleHeight / 4
+            // Clip to the growing fill region so corners are correct at any progress.
+            context.saveGState()
+            context.clip(to: CGRect(x: capsuleX, y: capsuleY, width: fillWidth, height: capsuleHeight))
+            let capsuleRect = CGRect(x: capsuleX, y: capsuleY, width: capsuleFullWidth, height: capsuleHeight)
+            context.setFillColor(CGColor(srgbRed: 0.9, green: 0.1, blue: 0.1, alpha: 0.8))
+            context.addPath(CGPath(roundedRect: capsuleRect, cornerWidth: cornerR, cornerHeight: cornerR, transform: nil))
+            context.fillPath()
+            context.restoreGState()
+        }
+
+        // — Pass 2: black stroke outline —
+        context.saveGState()
+        context.setTextDrawingMode(.stroke)
+        context.setStrokeColor(CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1))
+        context.setLineWidth(strokeWidth)
+        context.setLineJoin(.round)
+        let strokeFrame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, 0), framePath, nil)
+        CTFrameDraw(strokeFrame, context)
+        context.restoreGState()
+
+        // — Pass 3: white text fill —
         context.saveGState()
         context.setTextDrawingMode(.fill)
         let fillFrame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, 0), framePath, nil)
