@@ -6,7 +6,9 @@ A macOS command-line tool that generates a **transparent lyrics overlay video** 
 
 <img src=".assets/github-copilot-icon.svg" alt="GitHub Copilot" width="128" height="128">
 
-This library is AI implementation of a pre-existing project intended to help improve one some of core features I felt were missing from the original.
+This project is AI implementation of a pre-existing project intended to help improve one some of core features I felt were missing from the original.
+
+It "mostly" works, but it's not perfect.
 
 ## Features
 
@@ -88,4 +90,4 @@ The `[length:]` tag is validated against the MP3 duration (within a 1-second tol
 
 ## Dependencies
 
-- [LyrixLib](https://github.com/RustyKnight/LyrixLib) — local Swift package for LRC/LRCX parsing
+- [LyrixLib](https://github.com/RustyKnight/LyrixLib) — Swift package for LRC/LRCX parsing
