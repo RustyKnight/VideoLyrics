@@ -78,12 +78,29 @@ struct LyricsFrameRenderer {
 
     private func highlightedWordCount(line: LyrixLine, at milliseconds: Int) -> Int {
         guard !line.words.isEmpty else { return 0 }
-        var total = 0
-        for word in line.words where word.timestamp <= milliseconds {
-            let count = word.displayText.count
-            total += word.isUnfill ? -count : count
+        // Build word-end boundaries that account for synthetic spaces displayText inserts
+        // between adjacent tokens that lack a natural separator — mirroring the logic in
+        // LyrixLine.displayText and LyrixLine.wordCharBoundaries.
+        var pos = 0
+        var prevNeedsSpace = false
+        var boundaries: [Int] = []
+        for word in line.words {
+            let t = word.displayText
+            if prevNeedsSpace && !t.isEmpty && !t.hasPrefix(" ") {
+                pos += 1  // synthetic space added by displayText
+            }
+            pos += t.count
+            boundaries.append(pos)
+            prevNeedsSpace = !t.isEmpty && !t.hasSuffix(" ")
         }
-        return max(total, 0)
+
+        var total = 0
+        for (idx, word) in line.words.enumerated() where word.timestamp <= milliseconds {
+            total = word.isUnfill
+                ? max(0, total - word.displayText.count)
+                : boundaries[idx]
+        }
+        return total
     }
 
     // MARK: - Per-frame drawing
